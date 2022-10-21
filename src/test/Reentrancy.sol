@@ -13,6 +13,10 @@ contract EtherStore {
         balances[msg.sender] += msg.value;
     }
 
+    /**
+     * Best practice
+     * CEI --> check - effect - interact
+     */
     function withdrawFunds(uint256 _weiToWithdraw) public {
         require(balances[msg.sender] >= _weiToWithdraw);
         (bool send, ) = msg.sender.call{value: _weiToWithdraw}("");

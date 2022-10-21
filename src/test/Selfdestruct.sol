@@ -19,11 +19,17 @@ Now no one can deposit and the winner cannot be set.
 contract EtherGame {
     uint constant public targetAmount = 7 ether;
     address public winner;
+    // uint public balance;
 
     function deposit() public payable {
         require(msg.value == 1 ether, "You can only send 1 Ether");
 
-        uint balance = address(this).balance;   // vulnerable
+        /**
+         * best practice
+         * balance += msg.value;
+         * 
+         */
+        balance += address(this).balance;   // vulnerable
         require(balance <= targetAmount, "Game is over");
 
         if (balance == targetAmount) {
@@ -48,8 +54,8 @@ contract ContractTest is Test {
 
     function setUp() public {
         EtherGameContract = new EtherGame();
-        alice = vm.addr(1);
-        eve = vm.addr(2);
+        alice = makeAddr("alice");
+        eve = makeAddr("eve");
         vm.deal(address(alice), 1 ether);   
         vm.deal(address(eve), 1 ether); 
     }
@@ -71,6 +77,7 @@ contract ContractTest is Test {
         console.log("Attack...");
         AttackerContract = new Attack(EtherGameContract);
         AttackerContract.dos{value: 5 ether}();
+        // emit log_named_address("winner", EtherGameContract.winner());
 
         console.log("Balance of EtherGameContract", address(EtherGameContract).balance);
         console.log("Exploit completed, Game is over");

